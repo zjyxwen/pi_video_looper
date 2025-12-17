@@ -21,7 +21,7 @@ class VLCPlayer:
             '--aout=alsa',
         ]
         if loop:
-            args.append('--loop')
+            args.extend(['--repeat', '--no-play-and-exit'])
         else:
             args.append('--play-and-exit')
         args.extend(self._extra_args)

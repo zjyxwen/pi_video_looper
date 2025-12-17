@@ -31,8 +31,9 @@ User=${CURRENT_USER}
 SupplementaryGroups=input
 ExecStartPre=/bin/sleep 5
 ExecStart=/usr/local/bin/video_looper
-Restart=always
+Restart=on-failure
 RestartSec=3
+SuccessExitStatus=42
 Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/${CURRENT_UID}
 

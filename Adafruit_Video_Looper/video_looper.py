@@ -15,6 +15,7 @@ from .vlc_player import VLCPlayer
 class VideoLooper:
     def __init__(self, config_path):
         self._running = False
+        self._exit_requested = False
         self._stop_event = threading.Event()
         self._config = configparser.ConfigParser()
         self._config.read(config_path)
@@ -39,6 +40,7 @@ class VideoLooper:
                         return
                     if event.type == ecodes.EV_KEY and event.code == ecodes.KEY_ESC and event.value == 1:
                         self._running = False
+                        self._exit_requested = True
                         self._stop_event.set()
                         try:
                             self._player.stop()
@@ -80,30 +82,36 @@ class VideoLooper:
                 time.sleep(1)
                 continue
 
-            while self._running and self._usb.is_mounted():
+            single_video = self._playlist.length() == 1
+
+            if single_video:
                 movie = self._playlist.get_next()
-                if movie is None:
-                    break
-
-                single_video = self._playlist.length() == 1
-                self._player.play(movie, loop=single_video)
-
+                self._player.play(movie, loop=True)
                 while self._running and self._player.is_playing():
                     if not self._usb.is_mounted():
                         self._player.stop()
                         break
                     time.sleep(0.1)
-
-                if single_video:
-                    break
-
-                if self._wait_time > 0:
-                    time.sleep(self._wait_time)
+            else:
+                while self._running and self._usb.is_mounted():
+                    movie = self._playlist.get_next()
+                    if movie is None:
+                        break
+                    self._player.play(movie, loop=False)
+                    while self._running and self._player.is_playing():
+                        if not self._usb.is_mounted():
+                            self._player.stop()
+                            break
+                        time.sleep(0.1)
+                    if self._wait_time > 0:
+                        time.sleep(self._wait_time)
 
             if not self._usb.is_mounted():
                 self._playlist = None
 
         self._player.stop()
+        if self._exit_requested:
+            sys.exit(42)
 
     def _signal_handler(self, signum, frame):
         self._running = False
@@ -122,4 +130,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
