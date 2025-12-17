@@ -12,17 +12,18 @@ class VideoPlayer:
 
     def play(self, movie, loop=None):
         self.stop()
+        env = os.environ.copy()
+        env['DISPLAY'] = ':0'
         if loop == -1:
-            args = [
-                'ffmpeg',
-                '-stream_loop', '-1',
-                '-re',
-                '-i', movie.filename,
-                '-pix_fmt', 'yuv420p',
-                '-f', 'sdl',
-                '-window_fullscreen', '1',
-                'Video'
-            ]
+            script = 'while true; do ffplay -fs -autoexit -loglevel quiet "{}"; done'.format(movie.filename)
+            self._process = subprocess.Popen(
+                ['bash', '-c', script],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=env,
+                preexec_fn=os.setsid
+            )
         else:
             args = [
                 'ffplay',
@@ -31,17 +32,14 @@ class VideoPlayer:
                 '-loglevel', 'quiet',
                 movie.filename
             ]
-        env = os.environ.copy()
-        env['DISPLAY'] = ':0'
-        env['SDL_AUDIODRIVER'] = 'alsa'
-        self._process = subprocess.Popen(
-            args,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=env,
-            preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN)
-        )
+            self._process = subprocess.Popen(
+                args,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=env,
+                preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN)
+            )
 
     def is_playing(self):
         if self._process is None:
@@ -50,9 +48,15 @@ class VideoPlayer:
 
     def stop(self):
         if self._process is not None:
-            self._process.terminate()
+            try:
+                os.killpg(os.getpgid(self._process.pid), signal.SIGTERM)
+            except (ProcessLookupError, OSError):
+                pass
             try:
                 self._process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                self._process.kill()
+                try:
+                    os.killpg(os.getpgid(self._process.pid), signal.SIGKILL)
+                except (ProcessLookupError, OSError):
+                    pass
             self._process = None
