@@ -1,6 +1,7 @@
 import subprocess
 import time
 import signal
+import os
 
 
 class VLCPlayer:
@@ -18,15 +19,20 @@ class VLCPlayer:
             '--fullscreen',
             '--no-video-title-show',
             '--play-and-exit',
+            '--no-osd',
+            '--aout=alsa',
         ]
         if loop:
             args.extend(['--loop'])
         args.extend(self._extra_args)
         args.append(movie.filename)
+        env = os.environ.copy()
+        env['DISPLAY'] = ':0'
         self._process = subprocess.Popen(
             args,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=env,
             preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_IGN)
         )
 
@@ -43,4 +49,3 @@ class VLCPlayer:
             except subprocess.TimeoutExpired:
                 self._process.kill()
             self._process = None
-

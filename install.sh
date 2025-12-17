@@ -21,17 +21,21 @@ pip3 install . --break-system-packages
 cat > /etc/systemd/system/video_looper.service << EOF
 [Unit]
 Description=Pi Video Looper
-After=multi-user.target
+After=graphical.target
+Wants=graphical.target
 
 [Service]
 Type=simple
+User=pi
+ExecStartPre=/bin/sleep 5
 ExecStart=/usr/local/bin/video_looper
 Restart=always
 RestartSec=3
 Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target
 EOF
 
 systemctl daemon-reload
@@ -39,4 +43,3 @@ systemctl enable video_looper.service
 systemctl start video_looper.service
 
 echo "Installation complete"
-
