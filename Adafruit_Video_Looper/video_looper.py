@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+
+import configparser
+import os
+import sys
+import time
+import signal
+
+from .model import build_playlist
+from .usb_drive import USBDriveReader
+from .vlc_player import VLCPlayer
+
+
+class VideoLooper:
+    def __init__(self, config_path):
+        self._running = False
+        self._config = configparser.ConfigParser()
+        self._config.read(config_path)
+        self._usb = USBDriveReader(self._config)
+        self._player = VLCPlayer(self._config)
+        self._playlist = None
+        self._wait_time = self._config.getfloat('video_looper', 'wait_time')
+        self._extensions = self._config.get('video_looper', 'video_extensions').split(',')
+        self._extensions = [x.strip().lower() for x in self._extensions]
+
+    def _build_playlist(self):
+        paths = self._usb.get_paths()
+        if not paths:
+            return None
+        return build_playlist(paths, self._extensions)
+
+    def _idle_message(self):
+        print('Waiting for USB drive...')
+
+    def run(self):
+        self._running = True
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        signal.signal(signal.SIGINT, self._signal_handler)
+
+        while self._running:
+            if not self._usb.is_mounted():
+                if not self._usb.mount():
+                    self._idle_message()
+                    time.sleep(1)
+                    continue
+
+            self._playlist = self._build_playlist()
+            if self._playlist is None or self._playlist.length() == 0:
+                self._idle_message()
+                time.sleep(1)
+                continue
+
+            while self._running and self._usb.is_mounted():
+                movie = self._playlist.get_next()
+                if movie is None:
+                    break
+
+                single_video = self._playlist.length() == 1
+                self._player.play(movie, loop=single_video)
+
+                while self._running and self._player.is_playing():
+                    if not self._usb.is_mounted():
+                        self._player.stop()
+                        break
+                    time.sleep(0.1)
+
+                if single_video:
+                    break
+
+                if self._wait_time > 0:
+                    time.sleep(self._wait_time)
+
+            if not self._usb.is_mounted():
+                self._playlist = None
+
+        self._player.stop()
+
+    def _signal_handler(self, signum, frame):
+        self._running = False
+
+
+def main():
+    config_path = '/boot/firmware/video_looper.ini'
+    if not os.path.exists(config_path):
+        config_path = '/boot/video_looper.ini'
+    if len(sys.argv) > 1:
+        config_path = sys.argv[1]
+    looper = VideoLooper(config_path)
+    looper.run()
+
+
+if __name__ == '__main__':
+    main()
+
