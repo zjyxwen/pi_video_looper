@@ -11,7 +11,7 @@ class VLCPlayer:
     def supported_extensions(self):
         return ['.mp4', '.m4v', '.mkv', '.avi', '.mov', '.wmv', '.webm', '.flv', '.mpg', '.mpeg', '.3gp']
 
-    def play(self, movie, loop=False):
+    def play(self, movie, loop=None):
         self.stop()
         args = [
             'cvlc',
@@ -20,8 +20,8 @@ class VLCPlayer:
             '--no-osd',
             '--aout=alsa',
         ]
-        if loop:
-            args.extend(['--repeat', '--no-play-and-exit'])
+        if loop == -1:
+            args.append('--input-repeat=-1')
         else:
             args.append('--play-and-exit')
         args.extend(self._extra_args)

@@ -83,21 +83,25 @@ class VideoLooper:
                 continue
 
             single_video = self._playlist.length() == 1
+            player_loop = -1 if single_video else None
 
-            if single_video:
-                movie = self._playlist.get_next()
-                self._player.play(movie, loop=True)
-                while self._running and self._player.is_playing():
-                    if not self._usb.is_mounted():
-                        self._player.stop()
-                        break
-                    time.sleep(0.1)
-            else:
+            movie = self._playlist.get_next()
+            if movie is not None:
+                self._player.play(movie, loop=player_loop)
+
+            while self._running and self._player.is_playing():
+                if not self._usb.is_mounted():
+                    self._player.stop()
+                    self._playlist = None
+                    break
+                time.sleep(0.1)
+
+            if not single_video and self._running and self._usb.is_mounted():
                 while self._running and self._usb.is_mounted():
                     movie = self._playlist.get_next()
                     if movie is None:
                         break
-                    self._player.play(movie, loop=False)
+                    self._player.play(movie, loop=None)
                     while self._running and self._player.is_playing():
                         if not self._usb.is_mounted():
                             self._player.stop()
@@ -105,9 +109,6 @@ class VideoLooper:
                         time.sleep(0.1)
                     if self._wait_time > 0:
                         time.sleep(self._wait_time)
-
-            if not self._usb.is_mounted():
-                self._playlist = None
 
         self._player.stop()
         if self._exit_requested:
