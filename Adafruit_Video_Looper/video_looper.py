@@ -5,6 +5,7 @@ import os
 import sys
 import time
 import signal
+import threading
 
 from .model import build_playlist
 from .usb_drive import USBDriveReader
@@ -14,6 +15,7 @@ from .vlc_player import VLCPlayer
 class VideoLooper:
     def __init__(self, config_path):
         self._running = False
+        self._stop_event = threading.Event()
         self._config = configparser.ConfigParser()
         self._config.read(config_path)
         self._usb = USBDriveReader(self._config)
@@ -22,6 +24,39 @@ class VideoLooper:
         self._wait_time = self._config.getfloat('video_looper', 'wait_time')
         self._extensions = self._config.get('video_looper', 'video_extensions').split(',')
         self._extensions = [x.strip().lower() for x in self._extensions]
+
+    def _start_esc_listener(self):
+        try:
+            from evdev import InputDevice, categorize, ecodes, list_devices
+        except Exception:
+            return
+
+        def watch(dev_path):
+            try:
+                dev = InputDevice(dev_path)
+                caps = dev.capabilities()
+                keys = caps.get(ecodes.EV_KEY, [])
+                if ecodes.KEY_ESC not in keys:
+                    return
+                for event in dev.read_loop():
+                    if self._stop_event.is_set():
+                        return
+                    if event.type == ecodes.EV_KEY:
+                        key = categorize(event)
+                        if key.keycode == 'KEY_ESC' and key.keystate == key.key_down:
+                            self._running = False
+                            self._stop_event.set()
+                            try:
+                                self._player.stop()
+                            except Exception:
+                                pass
+                            return
+            except Exception:
+                return
+
+        for dev_path in list_devices():
+            t = threading.Thread(target=watch, args=(dev_path,), daemon=True)
+            t.start()
 
     def _build_playlist(self):
         paths = self._usb.get_paths()
@@ -36,6 +71,7 @@ class VideoLooper:
         self._running = True
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
+        self._start_esc_listener()
 
         while self._running:
             if not self._usb.is_mounted():
@@ -77,6 +113,7 @@ class VideoLooper:
 
     def _signal_handler(self, signum, frame):
         self._running = False
+        self._stop_event.set()
 
 
 def main():

@@ -6,7 +6,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 apt-get update
-apt-get install -y vlc python3-pip
+apt-get install -y vlc python3-pip python3-evdev
 
 if [ -f /boot/firmware/config.txt ]; then
     cp video_looper.ini /boot/firmware/video_looper.ini
@@ -17,6 +17,7 @@ fi
 pip3 install . --break-system-packages
 
 CURRENT_USER=$(logname)
+CURRENT_UID=$(id -u "${CURRENT_USER}")
 
 cat > /etc/systemd/system/video_looper.service << EOF
 [Unit]
@@ -27,12 +28,13 @@ Wants=graphical.target
 [Service]
 Type=simple
 User=${CURRENT_USER}
+SupplementaryGroups=input
 ExecStartPre=/bin/sleep 5
 ExecStart=/usr/local/bin/video_looper
 Restart=always
 RestartSec=3
 Environment=DISPLAY=:0
-Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=XDG_RUNTIME_DIR=/run/user/${CURRENT_UID}
 
 [Install]
 WantedBy=graphical.target
