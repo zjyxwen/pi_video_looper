@@ -12,17 +12,26 @@ class VideoPlayer:
 
     def play(self, movie, loop=None):
         self.stop()
-        args = [
-            'ffplay',
-            '-fs',
-            '-autoexit',
-            '-loglevel', 'quiet',
-            '-infbuf',
-            '-framedrop',
-        ]
         if loop == -1:
-            args.extend(['-loop', '0'])
-        args.append(movie.filename)
+            args = [
+                'ffplay',
+                '-loop', '0',
+                '-fs',
+                '-loglevel', 'quiet',
+                '-infbuf',
+                '-framedrop',
+                movie.filename
+            ]
+        else:
+            args = [
+                'ffplay',
+                '-fs',
+                '-autoexit',
+                '-loglevel', 'quiet',
+                '-infbuf',
+                '-framedrop',
+                movie.filename
+            ]
         env = os.environ.copy()
         env['DISPLAY'] = ':0'
         self._process = subprocess.Popen(
