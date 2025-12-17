@@ -12,26 +12,12 @@ class VideoPlayer:
 
     def play(self, movie, loop=None):
         self.stop()
+        args = ['cvlc', '--fullscreen', '--no-video-title-show', '--no-osd']
         if loop == -1:
-            args = [
-                'ffplay',
-                '-loop', '0',
-                '-fs',
-                '-loglevel', 'quiet',
-                '-infbuf',
-                '-framedrop',
-                movie.filename
-            ]
+            args.append('--repeat')
         else:
-            args = [
-                'ffplay',
-                '-fs',
-                '-autoexit',
-                '-loglevel', 'quiet',
-                '-infbuf',
-                '-framedrop',
-                movie.filename
-            ]
+            args.append('--play-and-exit')
+        args.append(movie.filename)
         env = os.environ.copy()
         env['DISPLAY'] = ':0'
         self._process = subprocess.Popen(
