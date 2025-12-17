@@ -13,20 +13,24 @@ class VideoPlayer:
     def play(self, movie, loop=None):
         self.stop()
         args = [
-            'ffplay',
-            '-fs',
-            '-loglevel', 'quiet',
+            'mpv',
+            '--fs',                      # fullscreen
+            '--no-terminal',             # no terminal output
+            '--no-input-terminal',       # don't read from stdin
+            '--really-quiet',            # suppress all output
+            '--no-osc',                  # no on-screen controller
+            '--no-input-default-bindings',  # disable default key bindings
+            '--hwdec=auto',              # hardware decoding for smooth playback
         ]
         if loop == -1:
-            # -loop 0 means infinite seamless looping within ffplay itself
-            args.extend(['-loop', '0'])
-        else:
-            # Single play then exit
-            args.append('-autoexit')
+            # Seamless gapless looping - mpv caches the video and loops without re-opening
+            args.extend([
+                '--loop-file=inf',       # infinite seamless loop
+                '--keep-open=no',        # don't pause at end
+            ])
         args.append(movie.filename)
         env = os.environ.copy()
         env['DISPLAY'] = ':0'
-        env['SDL_AUDIODRIVER'] = 'alsa'
         self._process = subprocess.Popen(
             args,
             stdin=subprocess.DEVNULL,

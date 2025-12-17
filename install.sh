@@ -6,7 +6,7 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 apt-get update
-apt-get install -y vlc python3-pip python3-evdev
+apt-get install -y mpv python3-pip python3-evdev
 
 if [ -f /boot/firmware/config.txt ]; then
     cp video_looper.ini /boot/firmware/video_looper.ini
