@@ -13,19 +13,21 @@ class VideoPlayer:
     def play(self, movie, loop=None):
         self.stop()
         args = [
-            'mpv',
-            '--fullscreen',
-            '--no-terminal',
-            '--no-osc',
-            '--no-input-default-bindings',
+            'ffplay',
+            '-fs',
+            '-autoexit',
+            '-loglevel', 'quiet',
+            '-infbuf',
+            '-framedrop',
         ]
         if loop == -1:
-            args.append('--loop-file=inf')
+            args.extend(['-loop', '0'])
         args.append(movie.filename)
         env = os.environ.copy()
         env['DISPLAY'] = ':0'
         self._process = subprocess.Popen(
             args,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             env=env,
@@ -45,4 +47,3 @@ class VideoPlayer:
             except subprocess.TimeoutExpired:
                 self._process.kill()
             self._process = None
-
