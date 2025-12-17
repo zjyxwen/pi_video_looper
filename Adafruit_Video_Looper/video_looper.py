@@ -9,7 +9,7 @@ import threading
 
 from .model import build_playlist
 from .usb_drive import USBDriveReader
-from .vlc_player import VLCPlayer
+from .video_player import VideoPlayer
 
 
 class VideoLooper:
@@ -20,7 +20,7 @@ class VideoLooper:
         self._config = configparser.ConfigParser()
         self._config.read(config_path)
         self._usb = USBDriveReader(self._config)
-        self._player = VLCPlayer(self._config)
+        self._player = VideoPlayer(self._config)
         self._playlist = None
         self._wait_time = self._config.getfloat('video_looper', 'wait_time')
         self._extensions = self._config.get('video_looper', 'video_extensions').split(',')

@@ -3,9 +3,8 @@ import signal
 import os
 
 
-class VLCPlayer:
+class VideoPlayer:
     def __init__(self, config):
-        self._extra_args = config.get('vlc', 'extra_args').split()
         self._process = None
 
     def supported_extensions(self):
@@ -14,17 +13,14 @@ class VLCPlayer:
     def play(self, movie, loop=None):
         self.stop()
         args = [
-            'cvlc',
+            'mpv',
             '--fullscreen',
-            '--no-video-title-show',
-            '--no-osd',
-            '--aout=alsa',
+            '--no-terminal',
+            '--no-osc',
+            '--no-input-default-bindings',
         ]
         if loop == -1:
-            args.append('--input-repeat=-1')
-        else:
-            args.append('--play-and-exit')
-        args.extend(self._extra_args)
+            args.append('--loop-file=inf')
         args.append(movie.filename)
         env = os.environ.copy()
         env['DISPLAY'] = ':0'
@@ -49,3 +45,4 @@ class VLCPlayer:
             except subprocess.TimeoutExpired:
                 self._process.kill()
             self._process = None
+
