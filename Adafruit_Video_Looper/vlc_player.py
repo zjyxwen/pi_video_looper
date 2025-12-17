@@ -1,5 +1,4 @@
 import subprocess
-import time
 import signal
 import os
 
@@ -18,12 +17,13 @@ class VLCPlayer:
             'cvlc',
             '--fullscreen',
             '--no-video-title-show',
-            '--play-and-exit',
             '--no-osd',
             '--aout=alsa',
         ]
         if loop:
-            args.extend(['--loop'])
+            args.append('--input-repeat=-1')
+        else:
+            args.append('--play-and-exit')
         args.extend(self._extra_args)
         args.append(movie.filename)
         env = os.environ.copy()
