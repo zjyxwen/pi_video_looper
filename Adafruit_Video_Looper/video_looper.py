@@ -27,30 +27,24 @@ class VideoLooper:
 
     def _start_esc_listener(self):
         try:
-            from evdev import InputDevice, categorize, ecodes, list_devices
+            from evdev import InputDevice, ecodes, list_devices
         except Exception:
             return
 
         def watch(dev_path):
             try:
                 dev = InputDevice(dev_path)
-                caps = dev.capabilities()
-                keys = caps.get(ecodes.EV_KEY, [])
-                if ecodes.KEY_ESC not in keys:
-                    return
                 for event in dev.read_loop():
                     if self._stop_event.is_set():
                         return
-                    if event.type == ecodes.EV_KEY:
-                        key = categorize(event)
-                        if key.keycode == 'KEY_ESC' and key.keystate == key.key_down:
-                            self._running = False
-                            self._stop_event.set()
-                            try:
-                                self._player.stop()
-                            except Exception:
-                                pass
-                            return
+                    if event.type == ecodes.EV_KEY and event.code == ecodes.KEY_ESC and event.value == 1:
+                        self._running = False
+                        self._stop_event.set()
+                        try:
+                            self._player.stop()
+                        except Exception:
+                            pass
+                        return
             except Exception:
                 return
 
