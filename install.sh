@@ -8,8 +8,6 @@ fi
 apt-get update
 apt-get install -y vlc python3-pip
 
-mkdir -p /mnt/usbdrive
-
 if [ -f /boot/firmware/config.txt ]; then
     cp video_looper.ini /boot/firmware/video_looper.ini
 else
