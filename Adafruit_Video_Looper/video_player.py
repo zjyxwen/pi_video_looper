@@ -1,34 +1,51 @@
 import subprocess
 import signal
 import os
+import shutil
 
 
 class VideoPlayer:
     def __init__(self, config):
         self._process = None
+        self._ram_file = None
+        # Create tmpfs directory for RAM-based playback
+        self._tmpdir = '/dev/shm/video_looper'
+        os.makedirs(self._tmpdir, exist_ok=True)
 
     def supported_extensions(self):
         return ['.mp4', '.m4v', '.mkv', '.avi', '.mov', '.wmv', '.webm', '.flv', '.mpg', '.mpeg', '.3gp']
 
     def play(self, movie, loop=None):
         self.stop()
+
+        video_path = movie.filename
+
+        # For looping: copy video to RAM (tmpfs) for zero-latency seeks
+        if loop == -1:
+            ram_path = os.path.join(self._tmpdir, os.path.basename(movie.filename))
+            try:
+                shutil.copy2(movie.filename, ram_path)
+                video_path = ram_path
+                self._ram_file = ram_path
+            except (IOError, OSError):
+                # Fall back to original file if copy fails
+                pass
+
         args = [
             'mpv',
-            '--fs',                      # fullscreen
-            '--no-terminal',             # no terminal output
-            '--no-input-terminal',       # don't read from stdin
-            '--really-quiet',            # suppress all output
-            '--no-osc',                  # no on-screen controller
-            '--no-input-default-bindings',  # disable default key bindings
-            '--hwdec=auto',              # hardware decoding for smooth playback
+            '--fs',
+            '--no-terminal',
+            '--no-input-terminal',
+            '--really-quiet',
+            '--no-osc',
+            '--no-input-default-bindings',
+            '--hwdec=auto',
         ]
         if loop == -1:
-            # Seamless gapless looping - mpv caches the video and loops without re-opening
-            args.extend([
-                '--loop-file=inf',       # infinite seamless loop
-                '--keep-open=no',        # don't pause at end
-            ])
-        args.append(movie.filename)
+            args.append('--loop-file=inf')
+
+        args.append(video_path)
+
         env = os.environ.copy()
         env['DISPLAY'] = ':0'
         self._process = subprocess.Popen(
@@ -53,3 +70,10 @@ class VideoPlayer:
             except subprocess.TimeoutExpired:
                 self._process.kill()
             self._process = None
+        # Clean up RAM copy
+        if self._ram_file and os.path.exists(self._ram_file):
+            try:
+                os.remove(self._ram_file)
+            except OSError:
+                pass
+            self._ram_file = None
