@@ -16,6 +16,8 @@ fi
 
 pip3 install . --break-system-packages
 
+CURRENT_USER=$(logname)
+
 cat > /etc/systemd/system/video_looper.service << EOF
 [Unit]
 Description=Pi Video Looper
@@ -24,7 +26,7 @@ Wants=graphical.target
 
 [Service]
 Type=simple
-User=pi
+User=${CURRENT_USER}
 ExecStartPre=/bin/sleep 5
 ExecStart=/usr/local/bin/video_looper
 Restart=always
